@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pick your bay · One More Round</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bisque: #F2DCC0;
+    --mat: #FBF0E1;
+    --pine: #1C2B24;
+    --turf: #3E7A4F;
+    --screen: #24343A;
+    --you: #E6B54A;
+    --muted: #6E6457;
+    --line: #D9BF9C;
+    --font: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bisque); color: var(--pine);
+    font-family: var(--font); font-size: 16px; line-height: 1.45;
+    padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 120px; }
+
+  header { display: grid; gap: 18px; grid-template-columns: 1fr auto; align-items: end; margin-bottom: 28px; }
+  h1 {
+    margin: 0; font-weight: 900; font-stretch: 125%; letter-spacing: -0.02em;
+    font-size: clamp(40px, 7vw, 76px); line-height: 0.92;
+  }
+  .sub { margin: 10px 0 0; color: var(--muted); font-stretch: 100%; }
+  .who { display: grid; gap: 6px; min-width: 240px; }
+  .who label { font-size: 14px; font-weight: 600; }
+  select, button { font: inherit; }
+  select {
+    padding: 10px 12px; border: 2px solid var(--pine); border-radius: 6px;
+    background: var(--mat); color: var(--pine);
+  }
+  .status { margin: 0 0 20px; padding: 12px 14px; border-left: 4px solid var(--turf); background: var(--mat); border-radius: 0 6px 6px 0; }
+  .status.err { border-color: #B23A2A; }
+  .status[hidden] { display: none; }
+
+  .bays { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .bay {
+    background: var(--mat); border-radius: 8px; overflow: hidden;
+    border: 2px solid transparent; transition: border-color .15s;
+  }
+  .bay.over { border-color: var(--turf); }
+  .bay.full .num { opacity: .55; }
+  .screen {
+    background: var(--screen); color: var(--bisque); padding: 10px 12px 6px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .num { font-weight: 900; font-stretch: 125%; font-size: 54px; line-height: .9; letter-spacing: -0.03em; }
+  .count { font-size: 13px; opacity: .8; padding-bottom: 6px; }
+  .slots { list-style: none; margin: 0; padding: 8px; display: grid; gap: 6px; min-height: 196px; }
+  .slot { min-height: 40px; border: 1.5px dashed var(--line); border-radius: 5px; }
+  .join {
+    width: calc(100% - 16px); margin: 0 8px 8px; padding: 9px; border: 0; border-radius: 5px;
+    background: var(--turf); color: #fff; font-weight: 700; cursor: pointer;
+  }
+  .join[hidden] { display: none; }
+
+  .chip {
+    display: flex; align-items: center; min-height: 40px; padding: 8px 10px; border-radius: 5px;
+    background: #fff; border: 1.5px solid var(--line); font-size: 15px; font-weight: 500;
+    user-select: none; -webkit-user-select: none;
+  }
+  .chip.me { background: var(--you); border-color: var(--pine); font-weight: 700; }
+  .chip[draggable="true"] { cursor: grab; }
+  .chip.dragging { opacity: .4; }
+
+  .pool { margin-top: 36px; }
+  .pool h2 { margin: 0 0 4px; font-size: 22px; font-weight: 800; font-stretch: 112%; }
+  .pool p { margin: 0 0 12px; color: var(--muted); }
+  .pool-list {
+    list-style: none; margin: 0; padding: 12px; display: flex; flex-wrap: wrap; gap: 6px;
+    border: 2px dashed var(--line); border-radius: 8px; min-height: 64px;
+  }
+  .pool-list.over { border-color: var(--turf); }
+  .pool-list .chip { min-height: 34px; padding: 5px 10px; }
+  .leave { margin-top: 12px; padding: 8px 12px; border: 2px solid var(--pine); border-radius: 6px; background: transparent; cursor: pointer; font-weight: 600; }
+  .leave[hidden] { display: none; }
+
+  .admin {
+    margin-top: 40px; padding: 14px; border: 2px solid var(--pine); border-radius: 8px;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .admin[hidden] { display: none; }
+  .admin button { padding: 8px 12px; border-radius: 6px; border: 2px solid var(--pine); background: var(--mat); cursor: pointer; font-weight: 600; }
+
+  button:focus-visible, select:focus-visible, .chip:focus-visible { outline: 3px solid var(--turf); outline-offset: 2px; }
+
+  @media (max-width: 640px) {
+    header { grid-template-columns: 1fr; }
+    .bays { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .num { font-size: 44px; }
+    .slots { min-height: 180px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Pick your bay</h1>
+      <p class="sub" id="info">Loading…</p>
+    </div>
+    <div class="who">
+      <label for="me">Who are you?</label>
+      <select id="me"><option value="">Choose your name</option></select>
+    </div>
+  </header>
+
+  <p class="status" id="status" hidden></p>
+
+  <section class="bays" id="bays" aria-label="Bays"></section>
+
+  <section class="pool">
+    <h2>Not in a bay yet</h2>
+    <p id="poolHint">Choose your name, then drag yourself into a bay or tap Join. Want to play with friends? Pick the same bay.</p>
+    <ul class="pool-list" id="pool" data-bay=""></ul>
+    <button class="leave" id="leave" hidden>Leave my bay</button>
+  </section>
+
+  <section class="admin" id="admin" hidden>
+    <strong>Organiser</strong>
+    <span>You can move everyone.</span>
+    <button id="lockBtn">Lock bays</button>
+    <button id="resetBtn">Clear all bays</button>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  if (params.get('admin')) {
+    try { localStorage.setItem('omr-admin', params.get('admin')); } catch {}
+    history.replaceState(null, '', location.pathname);
+  }
+  let adminToken = '';
+  try { adminToken = localStorage.getItem('omr-admin') || ''; } catch {}
+  let isAdmin = false;
+  let me = '';
+  try { me = localStorage.getItem('omr-me') || ''; } catch {}
+  let S = null;
+  let statusTimer;
+
+  function status(text, err) {
+    const el = $('status');
+    el.textContent = text; el.className = 'status' + (err ? ' err' : ''); el.hidden = false;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => { el.hidden = true; }, 4000);
+  }
+
+  async function api(url, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (adminToken) headers['x-admin-token'] = adminToken;
+    const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Something went wrong. Try again.');
+    return data;
+  }
+
+  const canMove = id => isAdmin || (id === me && !(S && S.locked));
+
+  async function move(playerId, bay) {
+    try {
+      S = await api('/api/move', { playerId, bay, as: me });
+      render();
+      const p = S.players.find(x => x.id === playerId);
+      status(bay ? `${p.name} is in bay ${bay}.` : `${p.name} left the bay.`);
+    } catch (e) { status(e.message, true); }
+  }
+
+  function chip(p) {
+    const li = document.createElement('li');
+    li.className = 'chip' + (p.id === me ? ' me' : '');
+    li.textContent = p.name;
+    li.dataset.id = p.id;
+    if (canMove(p.id)) {
+      li.draggable = true; li.tabIndex = 0;
+      li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', p.id); li.classList.add('dragging'); });
+      li.addEventListener('dragend', () => li.classList.remove('dragging'));
+    }
+    return li;
+  }
+
+  function dropZone(el, bay) {
+    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('over'));
+    el.addEventListener('drop', e => {
+      e.preventDefault(); el.classList.remove('over');
+      const id = e.dataTransfer.getData('text/plain');
+      if (id) move(id, bay);
+    });
+  }
+
+  function render() {
+    if (!S) return;
+    $('info').textContent = `${S.event}. ${S.info}. ${S.perBay} players per bay.` + (S.locked ? ' The bays are locked.' : '');
+
+    const sel = $('me');
+    if (sel.options.length <= 1) {
+      for (const p of S.players) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o); }
+    }
+    if (me && !S.players.some(p => p.id === me)) me = '';
+    sel.value = me;
+
+    const byBay = {};
+    for (const p of S.players) {
+      const b = S.assignments[p.id];
+      (byBay[b || 0] = byBay[b || 0] || []).push(p);
+    }
+    const myBay = me ? S.assignments[me] : undefined;
+
+    const bays = $('bays'); bays.textContent = '';
+    for (let b = 1; b <= S.bays; b++) {
+      const list = byBay[b] || [];
+      const full = list.length >= S.perBay;
+      const art = document.createElement('article');
+      art.className = 'bay' + (full ? ' full' : '');
+      art.setAttribute('aria-label', `Bay ${b}, ${list.length} of ${S.perBay}`);
+      art.innerHTML = `<div class="screen"><span class="num">${b}</span><span class="count">${list.length}/${S.perBay}</span></div>`;
+      const ul = document.createElement('ul'); ul.className = 'slots';
+      list.forEach(p => ul.appendChild(chip(p)));
+      for (let i = list.length; i < S.perBay; i++) { const s = document.createElement('li'); s.className = 'slot'; ul.appendChild(s); }
+      art.appendChild(ul);
+      const join = document.createElement('button');
+      join.className = 'join'; join.textContent = 'Join this bay';
+      join.hidden = !me || full || myBay === b || S.locked;
+      join.addEventListener('click', () => move(me, b));
+      art.appendChild(join);
+      dropZone(art, b);
+      bays.appendChild(art);
+    }
+
+    const pool = $('pool'); pool.textContent = '';
+    (byBay[0] || []).forEach(p => pool.appendChild(chip(p)));
+    $('leave').hidden = !me || !myBay || S.locked;
+    $('poolHint').textContent = S.locked
+      ? 'The bays are locked. Contact the organiser if you need to swap.'
+      : 'Choose your name, then drag yourself into a bay or tap Join. Want to play with friends? Pick the same bay.';
+
+    $('admin').hidden = !isAdmin;
+    $('lockBtn').textContent = S.locked ? 'Unlock bays' : 'Lock bays';
+  }
+
+  dropZone($('pool'), null);
+  $('me').addEventListener('change', e => {
+    me = e.target.value;
+    try { me ? localStorage.setItem('omr-me', me) : localStorage.removeItem('omr-me'); } catch {}
+    render();
+  });
+  $('leave').addEventListener('click', () => move(me, null));
+  $('lockBtn').addEventListener('click', async () => {
+    try { S = await api('/api/lock', { locked: !S.locked }); render(); status(S.locked ? 'Bays locked.' : 'Bays unlocked.'); }
+    catch (e) { status(e.message, true); }
+  });
+  $('resetBtn').addEventListener('click', async () => {
+    if (!confirm('Clear all bays? Everyone goes back to the list.')) return;
+    try { S = await api('/api/reset', {}); render(); status('All bays cleared.'); }
+    catch (e) { status(e.message, true); }
+  });
+
+  async function init() {
+    if (adminToken) {
+      try {
+        const r = await fetch('/api/admin-check', { headers: { 'x-admin-token': adminToken } });
+        isAdmin = (await r.json()).admin;
+        if (!isAdmin) { try { localStorage.removeItem('omr-admin'); } catch {} adminToken = ''; }
+      } catch {}
+    }
+    S = await (await fetch('/api/state')).json();
+    render();
+    const es = new EventSource('/api/stream');
+    es.onmessage = e => { S = JSON.parse(e.data); render(); };
+  }
+  init().catch(() => status('Could not load the bays. Refresh the page.', true));
+})();
+</script>
+</body>
+</html>
