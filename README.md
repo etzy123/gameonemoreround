@@ -34,3 +34,9 @@ De namen staan in `players.json`. Een nieuwe speler toevoegen: nieuw object met 
   ander. De server laat alleen toe dat je de naam verplaatst die je in "Who are you?" kiest.
 - De pagina toont alleen namen, geen e-mailadressen of telefoonnummers. Iedereen met de
   link ziet wel de namen van alle deelnemers.
+
+## Logo's
+
+Zet de logo's (wit, transparante PNG) in `public/logos/` als `bisque.png`, `flight.png` en
+`nike.png`. Ontbreekt een bestand, dan toont de pagina "bisque" of "Flight" als tekst en laat
+het Nike-logo weg.
