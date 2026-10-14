@@ -21,7 +21,10 @@ try {
   const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
   state = { ...state, ...saved };
   for (const id of Object.keys(state.assignments)) if (!playerIds.has(id)) delete state.assignments[id];
-} catch { /* first boot */ }
+} catch {
+  // First boot: start from the random pre-assignment in seed.json, if present.
+  try { state = { ...state, ...JSON.parse(fs.readFileSync(path.join(__dirname, 'seed.json'), 'utf8')) }; save(); } catch {}
+}
 
 function save() {
   const tmp = STATE_FILE + '.tmp';
@@ -59,12 +62,11 @@ app.get('/api/stream', (req, res) => {
   req.on('close', () => { clearInterval(ping); clients.delete(res); });
 });
 
-// Body: { playerId, bay (1..BAYS or null), as (playerId of the person acting) }
+// Body: { playerId, bay (1..BAYS or null) }
 app.post('/api/move', (req, res) => {
-  const { playerId, bay, as } = req.body || {};
+  const { playerId, bay } = req.body || {};
   const admin = isAdmin(req);
   if (!playerIds.has(playerId)) return res.status(400).json({ error: 'Unknown player.' });
-  if (!admin && as !== playerId) return res.status(403).json({ error: 'You can only move yourself.' });
   if (state.locked && !admin) return res.status(423).json({ error: 'The bays are locked. Ask the organiser to change your spot.' });
   if (bay !== null && !(Number.isInteger(bay) && bay >= 1 && bay <= BAYS))
     return res.status(400).json({ error: 'That bay does not exist.' });
@@ -83,9 +85,32 @@ app.post('/api/move', (req, res) => {
   res.json(publicState());
 });
 
+// Body: { a, b } -> the two players trade places (a bay or the waiting list).
+app.post('/api/swap', (req, res) => {
+  const { a, b } = req.body || {};
+  if (!playerIds.has(a) || !playerIds.has(b) || a === b) return res.status(400).json({ error: 'Unknown player.' });
+  if (state.locked && !isAdmin(req)) return res.status(423).json({ error: 'The bays are locked. Ask the organiser to change your spot.' });
+  const ba = state.assignments[a], bb = state.assignments[b];
+  if (ba === bb) return res.json(publicState());
+  if (bb) state.assignments[a] = bb; else delete state.assignments[a];
+  if (ba) state.assignments[b] = ba; else delete state.assignments[b];
+  state.version++; save(); broadcast();
+  res.json(publicState());
+});
+
 app.post('/api/lock', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
   state.locked = !!(req.body && req.body.locked);
+  state.version++; save(); broadcast();
+  res.json(publicState());
+});
+
+app.post('/api/shuffle', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
+  const ids = players.map(p => p.id);
+  for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  state.assignments = {};
+  ids.slice(0, BAYS * PER_BAY).forEach((id, i) => { state.assignments[id] = (i % BAYS) + 1; });
   state.version++; save(); broadcast();
   res.json(publicState());
 });

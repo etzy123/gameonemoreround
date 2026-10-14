@@ -31,7 +31,7 @@
     background-position: 0 0, 2px 3px;
     padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
   }
-  .wrap { max-width: 1000px; margin: 0 auto; padding: 72px 20px 56px; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 72px 20px 72px; }
 
   .masthead { text-align: center; color: #fff; margin-bottom: 26px; }
   .masthead h1 {
@@ -47,19 +47,8 @@
   .tag { margin: 0; font-family: var(--marker); color: var(--orange); font-size: 13px; text-transform: uppercase; letter-spacing: .02em; }
   .card-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding-bottom: 12px; border-bottom: 2px solid var(--ink); }
   .card-head h2 { margin: 2px 0 0; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(38px, 6vw, 58px); line-height: 1; }
-  .spots { text-align: right; flex: none; }
-  .spots b { display: block; font-family: var(--serif); font-style: italic; font-weight: 500; color: var(--orange); font-size: 40px; line-height: 1; }
-  .spots span { font-family: var(--marker); font-size: 11px; text-transform: uppercase; }
 
-  .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 26px 0 8px; }
-  .who label { font-family: var(--serif); font-style: italic; font-size: 24px; }
-  select, button { font: inherit; color: inherit; }
-  select {
-    min-width: 240px; padding: 6px 28px 6px 2px; border: 0; border-bottom: 2px solid var(--ink); border-radius: 0;
-    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23141414' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 4px center;
-    appearance: none; -webkit-appearance: none; font-size: 16px; font-weight: 500;
-  }
-  .hint { margin: 0 0 24px; color: var(--muted); max-width: 60ch; }
+  .hint { margin: 18px 0 24px; color: var(--muted); max-width: 60ch; }
   .status { margin: 0 0 18px; font-weight: 500; }
   .status.err { color: var(--orange-deep); }
   .status[hidden] { display: none; }
@@ -74,50 +63,34 @@
   .count { font-size: 12px; color: var(--muted); }
   .slots { list-style: none; margin: 0; padding: 0; }
   .slots li { min-height: 34px; border-bottom: 1px dashed var(--rule); display: flex; align-items: center; }
-  .join {
-    margin-top: 10px; padding: 0 0 2px; border: 0; border-bottom: 2px solid var(--ink); background: none;
-    font-weight: 500; cursor: pointer;
-  }
-  .join:hover { color: var(--orange); border-color: var(--orange); }
-  .join[hidden] { display: none; }
 
   .chip { font-size: 14px; font-weight: 500; user-select: none; -webkit-user-select: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .slots .chip { width: 100%; }
-  .chip.me { color: var(--orange); font-weight: 700; }
-  .slots .chip.me::before { content: "\2192\00a0"; }
-  .chip[draggable="true"] { cursor: grab; }
-  .chip.dragging { opacity: .4; }
+  .chip.movable { cursor: grab; touch-action: none; }
+  .chip.dragging { opacity: .3; }
+  .chip.over { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
+  .ghost { position: fixed; z-index: 50; pointer-events: none; padding: 6px 12px; background: var(--orange); color: #fff;
+    font-size: 14px; font-weight: 700; transform: translate(-50%, -120%) rotate(-2deg); box-shadow: 0 6px 18px rgba(0,0,0,.25); white-space: nowrap; }
 
+  .pool[hidden] { display: none; }
   .pool { margin-top: 40px; padding-top: 20px; border-top: 2px solid var(--ink); }
   .pool h3 { margin: 2px 0 12px; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 30px; line-height: 1.1; }
   .pool-list { list-style: none; margin: 0; padding: 10px 0; display: flex; flex-wrap: wrap; gap: 6px; min-height: 52px; transition: background-color .15s; }
   .pool-list.over { background: rgba(226, 56, 11, .08); }
   .pool-list .chip { padding: 5px 10px; border: 1px solid var(--ink); background: #fff; }
-  .pool-list .chip.me { background: var(--orange); border-color: var(--orange); color: #fff; }
-  .leave { margin-top: 14px; padding: 0 0 2px; border: 0; border-bottom: 2px solid var(--ink); background: none; font-weight: 500; cursor: pointer; }
-  .leave[hidden] { display: none; }
 
   .admin { margin-top: 30px; padding-top: 16px; border-top: 1px dashed var(--rule); display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline; }
   .admin[hidden] { display: none; }
   .admin button { padding: 0 0 2px; border: 0; border-bottom: 2px solid var(--ink); background: none; font-weight: 500; cursor: pointer; }
 
-  .facts { margin: 34px 0 0; padding: 22px 0; border-top: 1px solid rgba(255,255,255,.55); border-bottom: 1px solid rgba(255,255,255,.55);
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; text-align: center; color: #fff; list-style: none; }
-  .facts b { display: block; font-family: var(--marker); font-weight: 400; font-size: 17px; line-height: 1.25; }
-  .facts span { display: block; margin-top: 4px; font-size: 10px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; }
-  .logos { margin-top: 26px; display: flex; justify-content: center; align-items: center; gap: 28px; color: #fff; }
-  .logos img { height: 28px; width: auto; display: block; }
-  .logos .txt { font-family: var(--serif); font-style: italic; font-size: 18px; }
 
-  button:focus-visible, select:focus-visible, .chip:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+  button:focus-visible, .chip:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
 
   @media (max-width: 820px) { .bays { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 640px) {
     .wrap { padding-top: 48px; }
     .card { padding: 28px 18px 24px; transform: none; }
     .bays { grid-template-columns: repeat(2, 1fr); gap: 22px 16px; }
-    .facts { grid-template-columns: repeat(2, 1fr); }
-    select { min-width: 0; width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -133,44 +106,26 @@
     <p class="tag">You're in</p>
     <div class="card-head">
       <h2>Pick your bay.</h2>
-      <div class="spots"><b id="open">0</b><span>spots open</span></div>
     </div>
-
-    <div class="who">
-      <label for="me">Who are you?</label>
-      <select id="me"><option value="">Choose your name</option></select>
-    </div>
-    <p class="hint" id="poolHint">Choose your name, then drag yourself into a bay or tap Join. Playing with friends? Pick the same bay.</p>
+    <p class="hint" id="poolHint">Everyone has a random bay. Want to play with friends? Drag your name onto someone in their bay to swap places, or into a bay with an open spot.</p>
     <p class="status" id="status" hidden></p>
 
     <section class="bays" id="bays" aria-label="Bays"></section>
 
-    <section class="pool">
+    <section class="pool" id="poolSection">
       <p class="tag">Not placed yet</p>
-      <h3>Still looking for a bay</h3>
+      <h3>Not in a bay</h3>
       <ul class="pool-list" id="pool"></ul>
-      <button class="leave" id="leave" hidden>Leave my bay</button>
     </section>
 
     <section class="admin" id="admin" hidden>
       <span class="tag">Organiser</span>
       <button id="lockBtn">Lock bays</button>
+      <button id="shuffleBtn">Shuffle everyone</button>
       <button id="resetBtn">Clear all bays</button>
     </section>
     <p id="info" hidden></p>
   </main>
-
-  <ul class="facts">
-    <li><b>Edition 001</b><span>Of five +</span></li>
-    <li><b>Nike Golf</b><span>Prizes &amp; challenge +</span></li>
-    <li><b>48 players</b><span>18 holes Stableford +</span></li>
-    <li><b>Friday October 23</b><span>17.30, Flight Golf Amsterdam +</span></li>
-  </ul>
-  <div class="logos">
-    <img src="/logos/bisque.png" alt="Bisque" onerror="this.outerHTML='<span class=txt>bisque</span>'">
-    <img src="/logos/flight.png" alt="Flight Golf" onerror="this.outerHTML='<span class=txt>Flight</span>'">
-    <img src="/logos/nike.png" alt="Nike" onerror="this.remove()">
-  </div>
 </div>
 
 <script>
@@ -184,9 +139,9 @@
   let adminToken = '';
   try { adminToken = localStorage.getItem('omr-admin') || ''; } catch {}
   let isAdmin = false;
-  let me = '';
-  try { me = localStorage.getItem('omr-me') || ''; } catch {}
   let S = null;
+  let dragging = null;
+  let pending = null;
   let statusTimer;
 
   function status(text, err) {
@@ -205,57 +160,108 @@
     return data;
   }
 
-  const canMove = id => isAdmin || (id === me && !(S && S.locked));
+  const canMove = () => isAdmin || !(S && S.locked);
 
   async function move(playerId, bay) {
+    if ((S.assignments[playerId] || null) === bay) return;
+    if (bay && Object.values(S.assignments).filter(x => x === bay).length >= S.perBay) {
+      status(`Bay ${bay} is full. Drop your name on someone's name to swap places.`, true); return;
+    }
     try {
-      S = await api('/api/move', { playerId, bay, as: me });
+      S = await api('/api/move', { playerId, bay });
       render();
       const p = S.players.find(x => x.id === playerId);
-      status(bay ? `${p.name} is in bay ${bay}.` : `${p.name} left the bay.`);
+      status(bay ? `${p.name} is in bay ${bay}.` : `${p.name} is back on the list.`);
     } catch (e) { status(e.message, true); }
   }
 
+  async function swap(a, b) {
+    try {
+      S = await api('/api/swap', { a, b });
+      render();
+      const n = id => S.players.find(x => x.id === id).name;
+      status(`${n(a)} and ${n(b)} swapped places.`);
+    } catch (e) { status(e.message, true); }
+  }
+
+  // Pointer-based drag: works with mouse and touch.
+  function startDrag(e, p, el) {
+    if (e.button !== undefined && e.button !== 0) return;
+    pending = { p, el, x: e.clientX, y: e.clientY, id: e.pointerId };
+  }
+  function targetAt(x, y, selfId) {
+    const hit = document.elementFromPoint(x, y);
+    if (!hit) return null;
+    const other = hit.closest('[data-swap]');
+    if (other && other.dataset.swap !== selfId) return other;
+    return hit.closest('[data-drop]');
+  }
+  let overEl = null;
+  function setOver(el) {
+    if (overEl === el) return;
+    if (overEl) overEl.classList.remove('over');
+    overEl = el; if (el) el.classList.add('over');
+  }
+  let scrollRaf = null, lastY = 0;
+  function autoScroll() {
+    const edge = 70, h = window.innerHeight;
+    let dy = 0;
+    if (lastY < edge) dy = -Math.ceil((edge - lastY) / 5);
+    else if (lastY > h - edge) dy = Math.ceil((lastY - (h - edge)) / 5);
+    if (dy) window.scrollBy(0, dy);
+    scrollRaf = dragging ? requestAnimationFrame(autoScroll) : null;
+  }
+  window.addEventListener('pointermove', e => {
+    if (pending && !dragging && e.pointerId === pending.id) {
+      if (Math.hypot(e.clientX - pending.x, e.clientY - pending.y) < 6) return;
+      const g = document.createElement('div');
+      g.className = 'ghost'; g.textContent = pending.p.name;
+      document.body.appendChild(g);
+      pending.el.classList.add('dragging');
+      dragging = { ...pending, ghost: g };
+      pending = null;
+      scrollRaf = requestAnimationFrame(autoScroll);
+    }
+    if (!dragging) return;
+    e.preventDefault();
+    lastY = e.clientY;
+    dragging.ghost.style.left = e.clientX + 'px';
+    dragging.ghost.style.top = e.clientY + 'px';
+    setOver(targetAt(e.clientX, e.clientY, dragging.p.id));
+  }, { passive: false });
+  function endDrag(e, cancel) {
+    pending = null;
+    if (!dragging) return;
+    const d = dragging; dragging = null;
+    d.ghost.remove(); d.el.classList.remove('dragging');
+    const t = cancel ? null : targetAt(e.clientX, e.clientY, d.p.id);
+    setOver(null);
+    if (t && t.dataset.swap) swap(d.p.id, t.dataset.swap);
+    else if (t) move(d.p.id, t.dataset.drop === 'pool' ? null : Number(t.dataset.drop));
+    else render();
+  }
+  window.addEventListener('pointerup', e => endDrag(e, false));
+  window.addEventListener('pointercancel', e => endDrag(e, true));
+
   function chip(p) {
     const li = document.createElement('li');
-    li.className = 'chip' + (p.id === me ? ' me' : '');
+    li.className = 'chip';
     li.textContent = p.name;
-    li.dataset.id = p.id;
-    if (canMove(p.id)) {
-      li.draggable = true; li.tabIndex = 0;
-      li.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', p.id); li.classList.add('dragging'); });
-      li.addEventListener('dragend', () => li.classList.remove('dragging'));
+    li.dataset.swap = p.id;
+    if (canMove()) {
+      li.classList.add('movable');
+      li.addEventListener('pointerdown', e => startDrag(e, p, li));
     }
     return li;
   }
 
-  function dropZone(el, bay) {
-    el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
-    el.addEventListener('dragleave', () => el.classList.remove('over'));
-    el.addEventListener('drop', e => {
-      e.preventDefault(); el.classList.remove('over');
-      const id = e.dataTransfer.getData('text/plain');
-      if (id) move(id, bay);
-    });
-  }
-
   function render() {
-    if (!S) return;
-    $('open').textContent = S.bays * S.perBay - Object.keys(S.assignments).length;
-
-    const sel = $('me');
-    if (sel.options.length <= 1) {
-      for (const p of S.players) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o); }
-    }
-    if (me && !S.players.some(p => p.id === me)) me = '';
-    sel.value = me;
-
+    if (!S || dragging) return;
     const byBay = {};
     for (const p of S.players) {
       const b = S.assignments[p.id];
       (byBay[b || 0] = byBay[b || 0] || []).push(p);
     }
-    const myBay = me ? S.assignments[me] : undefined;
 
     const bays = $('bays'); bays.textContent = '';
     for (let b = 1; b <= S.bays; b++) {
@@ -263,41 +269,35 @@
       const full = list.length >= S.perBay;
       const art = document.createElement('article');
       art.className = 'bay' + (full ? ' full' : '');
+      art.dataset.drop = String(b);
       art.setAttribute('aria-label', `Bay ${b}, ${list.length} of ${S.perBay}`);
       art.innerHTML = `<div class="bay-head"><span class="bay-name"><small>Bay</small>${b}</span><span class="count">${list.length}/${S.perBay}</span></div>`;
       const ul = document.createElement('ul'); ul.className = 'slots';
       list.forEach(p => ul.appendChild(chip(p)));
       for (let i = list.length; i < S.perBay; i++) ul.appendChild(document.createElement('li'));
       art.appendChild(ul);
-      const join = document.createElement('button');
-      join.className = 'join'; join.textContent = 'Join this bay';
-      join.hidden = !me || full || myBay === b || S.locked;
-      join.addEventListener('click', () => move(me, b));
-      art.appendChild(join);
-      dropZone(art, b);
       bays.appendChild(art);
     }
 
     const pool = $('pool'); pool.textContent = '';
+    pool.dataset.drop = 'pool';
     (byBay[0] || []).forEach(p => pool.appendChild(chip(p)));
-    $('leave').hidden = !me || !myBay || S.locked;
-    $('poolHint').textContent = S.locked
+    $('poolSection').hidden = !(byBay[0] || []).length && !isAdmin;
+    $('poolHint').textContent = S.locked && !isAdmin
       ? 'The bays are locked. Contact the organiser if you need to swap.'
-      : 'Choose your name, then drag yourself into a bay or tap Join. Playing with friends? Pick the same bay.';
+      : 'Everyone has a random bay. Want to play with friends? Drag your name onto someone in their bay to swap places, or into a bay with an open spot.';
 
     $('admin').hidden = !isAdmin;
     $('lockBtn').textContent = S.locked ? 'Unlock bays' : 'Lock bays';
   }
 
-  dropZone($('pool'), null);
-  $('me').addEventListener('change', e => {
-    me = e.target.value;
-    try { me ? localStorage.setItem('omr-me', me) : localStorage.removeItem('omr-me'); } catch {}
-    render();
-  });
-  $('leave').addEventListener('click', () => move(me, null));
   $('lockBtn').addEventListener('click', async () => {
     try { S = await api('/api/lock', { locked: !S.locked }); render(); status(S.locked ? 'Bays locked.' : 'Bays unlocked.'); }
+    catch (e) { status(e.message, true); }
+  });
+  $('shuffleBtn').addEventListener('click', async () => {
+    if (!confirm('Shuffle everyone into random bays? The current line-up is replaced.')) return;
+    try { S = await api('/api/shuffle', {}); render(); status('Everyone shuffled into random bays.'); }
     catch (e) { status(e.message, true); }
   });
   $('resetBtn').addEventListener('click', async () => {

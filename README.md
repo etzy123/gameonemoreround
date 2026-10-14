@@ -1,6 +1,8 @@
 # One More Round: bay picker
 
-Spelers kiezen hun naam en slepen zichzelf in een bay (of tikken op "Join this bay").
+Iedereen staat bij de start al willekeurig in een bay (zie `seed.json`). Spelers slepen hun
+naam op iemand anders om van plek te ruilen, of naar een bay met een open plek. Werkt met
+muis en touch.
 12 bays, 4 spelers per bay. Wijzigingen zijn live zichtbaar voor iedereen.
 
 ## Deployen op Railway
@@ -20,6 +22,7 @@ Spelers kiezen hun naam en slepen zichzelf in een bay (of tikken op "Join this b
 Open eenmalig `https://<jouw-domein>/?admin=<ADMIN_TOKEN>`. De token wordt in je browser
 onthouden en uit de URL gehaald. Daarna kun je:
 - iedereen verslepen
+- iedereen opnieuw willekeurig indelen (Shuffle everyone)
 - de bays op slot zetten (spelers kunnen dan niets meer wijzigen)
 - alle bays leegmaken
 
@@ -30,13 +33,12 @@ De namen staan in `players.json`. Een nieuwe speler toevoegen: nieuw object met 
 
 ## Let op
 
-- Spelers kiezen zelf wie ze zijn. Er is geen login, dus iemand kan zich voordoen als een
-  ander. De server laat alleen toe dat je de naam verplaatst die je in "Who are you?" kiest.
+- Er is geen login: iedereen met de link kan elke naam verslepen. Zet de bays na de deadline
+  op slot via de organisatormodus, dan kan alleen jij nog wijzigen.
 - De pagina toont alleen namen, geen e-mailadressen of telefoonnummers. Iedereen met de
   link ziet wel de namen van alle deelnemers.
 
-## Logo's
+## Startindeling
 
-Zet de logo's (wit, transparante PNG) in `public/logos/` als `bisque.png`, `flight.png` en
-`nike.png`. Ontbreekt een bestand, dan toont de pagina "bisque" of "Flight" als tekst en laat
-het Nike-logo weg.
+`seed.json` wordt alleen gebruikt bij de allereerste start, als er nog geen opgeslagen
+indeling op het volume staat. Daarna blijft de live indeling staan, ook bij een redeploy.
