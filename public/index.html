@@ -68,6 +68,12 @@
   .slots .chip { width: 100%; }
   .chip.movable { cursor: grab; touch-action: none; }
   .chip.dragging { opacity: .3; }
+  button { font: inherit; color: inherit; }
+  .bay-lock { margin-top: 10px; padding: 0 0 2px; border: 0; border-bottom: 2px solid var(--ink); background: none; font-weight: 500; font-size: 13px; cursor: pointer; }
+  .bay-lock:hover { color: var(--orange); border-color: var(--orange); }
+  .lock-tag { font-family: var(--marker); color: var(--orange); font-size: 11px; text-transform: uppercase; margin-right: 8px; }
+  .bay.locked .bay-head { border-bottom-width: 2px; }
+  .bay.locked .slots li { border-bottom-style: solid; border-bottom-color: var(--ink); }
   .chip.over { color: var(--orange); text-decoration: underline; text-underline-offset: 3px; }
   .ghost { position: fixed; z-index: 50; pointer-events: none; padding: 6px 12px; background: var(--orange); color: #fff;
     font-size: 14px; font-weight: 700; transform: translate(-50%, -120%) rotate(-2deg); box-shadow: 0 6px 18px rgba(0,0,0,.25); white-space: nowrap; }
@@ -107,7 +113,7 @@
     <div class="card-head">
       <h2>Pick your bay.</h2>
     </div>
-    <p class="hint" id="poolHint">Everyone has a random bay. Want to play with friends? Drag your name onto someone in their bay to swap places, or into a bay with an open spot.</p>
+    <p class="hint" id="poolHint">Everyone has a random bay. Want to play with friends? Drag your name onto someone in their bay to swap places. Happy with your group? Lock your bay so nobody can swap you out.</p>
     <p class="status" id="status" hidden></p>
 
     <section class="bays" id="bays" aria-label="Bays"></section>
@@ -162,8 +168,20 @@
 
   const canMove = () => isAdmin || !(S && S.locked);
 
+  async function setBayLock(bay, locked) {
+    try {
+      S = await api('/api/bay-lock', { bay, locked });
+      render();
+      status(locked ? `Bay ${bay} is locked.` : `Bay ${bay} is unlocked.`);
+    } catch (e) { status(e.message, true); }
+  }
+
   async function move(playerId, bay) {
     if ((S.assignments[playerId] || null) === bay) return;
+    const from = S.assignments[playerId];
+    if (!isAdmin && (isBayLocked(from) || isBayLocked(bay))) {
+      status(`Bay ${isBayLocked(from) ? from : bay} is locked. Ask the organiser if you need to change it.`, true); return;
+    }
     if (bay && Object.values(S.assignments).filter(x => x === bay).length >= S.perBay) {
       status(`Bay ${bay} is full. Drop your name on someone's name to swap places.`, true); return;
     }
@@ -175,7 +193,13 @@
     } catch (e) { status(e.message, true); }
   }
 
+  const isBayLocked = b => !!(b && S && (S.lockedBays || []).includes(b));
+
   async function swap(a, b) {
+    const la = S.assignments[a], lb = S.assignments[b];
+    if (!isAdmin && (isBayLocked(la) || isBayLocked(lb))) {
+      status(`Bay ${isBayLocked(la) ? la : lb} is locked. Ask the organiser if you need to change it.`, true); return;
+    }
     try {
       S = await api('/api/swap', { a, b });
       render();
@@ -248,7 +272,7 @@
     li.className = 'chip';
     li.textContent = p.name;
     li.dataset.swap = p.id;
-    if (canMove()) {
+    if (canMove() && (isAdmin || !isBayLocked(S.assignments[p.id]))) {
       li.classList.add('movable');
       li.addEventListener('pointerdown', e => startDrag(e, p, li));
     }
@@ -268,14 +292,30 @@
       const list = byBay[b] || [];
       const full = list.length >= S.perBay;
       const art = document.createElement('article');
-      art.className = 'bay' + (full ? ' full' : '');
+      const locked = isBayLocked(b);
+      art.className = 'bay' + (full ? ' full' : '') + (locked ? ' locked' : '');
       art.dataset.drop = String(b);
       art.setAttribute('aria-label', `Bay ${b}, ${list.length} of ${S.perBay}`);
-      art.innerHTML = `<div class="bay-head"><span class="bay-name"><small>Bay</small>${b}</span><span class="count">${list.length}/${S.perBay}</span></div>`;
+      art.innerHTML = `<div class="bay-head"><span class="bay-name"><small>Bay</small>${b}</span><span class="count">${locked ? '<span class="lock-tag">Locked</span>' : ''}${list.length}/${S.perBay}</span></div>`;
       const ul = document.createElement('ul'); ul.className = 'slots';
       list.forEach(p => ul.appendChild(chip(p)));
       for (let i = list.length; i < S.perBay; i++) ul.appendChild(document.createElement('li'));
       art.appendChild(ul);
+      const showLock = !locked && list.length > 0 && (!S.locked || isAdmin);
+      const showUnlock = locked && isAdmin;
+      if (showLock || showUnlock) {
+        const btn = document.createElement('button');
+        btn.className = 'bay-lock';
+        btn.textContent = locked ? 'Unlock bay' : 'Lock this bay';
+        btn.addEventListener('click', () => {
+          if (!locked) {
+            const names = list.map(p => p.name).join(', ');
+            if (!confirm(`Lock bay ${b} with ${names}? Nobody can move in or out after this. Only the organiser can unlock it.`)) return;
+          }
+          setBayLock(b, !locked);
+        });
+        art.appendChild(btn);
+      }
       bays.appendChild(art);
     }
 
@@ -285,7 +325,7 @@
     $('poolSection').hidden = !(byBay[0] || []).length && !isAdmin;
     $('poolHint').textContent = S.locked && !isAdmin
       ? 'The bays are locked. Contact the organiser if you need to swap.'
-      : 'Everyone has a random bay. Want to play with friends? Drag your name onto someone in their bay to swap places, or into a bay with an open spot.';
+      : 'Everyone has a random bay. Want to play with friends? Drag your name onto someone in their bay to swap places. Happy with your group? Lock your bay so nobody can swap you out.';
 
     $('admin').hidden = !isAdmin;
     $('lockBtn').textContent = S.locked ? 'Unlock bays' : 'Lock bays';

@@ -3,6 +3,10 @@
 Iedereen staat bij de start al willekeurig in een bay (zie `seed.json`). Spelers slepen hun
 naam op iemand anders om van plek te ruilen, of naar een bay met een open plek. Werkt met
 muis en touch.
+
+Tevreden met je groep? Met "Lock this bay" zet je een bay op slot: niemand kan er dan nog in,
+uit of mee ruilen. Iedereen kan een bay op slot zetten, alleen de organisator kan hem weer
+openen.
 12 bays, 4 spelers per bay. Wijzigingen zijn live zichtbaar voor iedereen.
 
 ## Deployen op Railway
@@ -22,9 +26,11 @@ muis en touch.
 Open eenmalig `https://<jouw-domein>/?admin=<ADMIN_TOKEN>`. De token wordt in je browser
 onthouden en uit de URL gehaald. Daarna kun je:
 - iedereen verslepen
-- iedereen opnieuw willekeurig indelen (Shuffle everyone)
+- iedereen opnieuw willekeurig indelen (Shuffle everyone). Bays die op slot staan blijven
+  zoals ze zijn.
+- losse bays weer openen (Unlock bay)
 - de bays op slot zetten (spelers kunnen dan niets meer wijzigen)
-- alle bays leegmaken
+- alle bays leegmaken (haalt ook alle sloten eraf)
 
 ## Spelerslijst aanpassen
 
@@ -42,3 +48,8 @@ De namen staan in `players.json`. Een nieuwe speler toevoegen: nieuw object met 
 
 `seed.json` wordt alleen gebruikt bij de allereerste start, als er nog geen opgeslagen
 indeling op het volume staat. Daarna blijft de live indeling staan, ook bij een redeploy.
+
+## Updaten vanaf de vorige versie
+
+Vervang de bestanden in je repo en push. De bestaande indeling op het volume blijft staan;
+`seed.json` wordt bij een update niet opnieuw gebruikt.

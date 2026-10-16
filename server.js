@@ -16,11 +16,12 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 const players = JSON.parse(fs.readFileSync(path.join(__dirname, 'players.json'), 'utf8'));
 const playerIds = new Set(players.map(p => p.id));
 
-let state = { assignments: {}, locked: false, version: 0 };
+let state = { assignments: {}, locked: false, lockedBays: {}, version: 0 };
 try {
   const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
   state = { ...state, ...saved };
   for (const id of Object.keys(state.assignments)) if (!playerIds.has(id)) delete state.assignments[id];
+  if (!state.lockedBays || typeof state.lockedBays !== 'object') state.lockedBays = {};
 } catch {
   // First boot: start from the random pre-assignment in seed.json, if present.
   try { state = { ...state, ...JSON.parse(fs.readFileSync(path.join(__dirname, 'seed.json'), 'utf8')) }; save(); } catch {}
@@ -34,7 +35,8 @@ function save() {
 
 function publicState() {
   return { event: EVENT_NAME, info: EVENT_INFO, bays: BAYS, perBay: PER_BAY,
-           players, assignments: state.assignments, locked: state.locked, version: state.version };
+           players, assignments: state.assignments, locked: state.locked,
+           lockedBays: Object.keys(state.lockedBays).map(Number), version: state.version };
 }
 
 const clients = new Set();
@@ -42,6 +44,9 @@ function broadcast() {
   const msg = `data: ${JSON.stringify(publicState())}\n\n`;
   for (const res of clients) res.write(msg);
 }
+
+const bayLocked = b => !!(b && state.lockedBays[b]);
+const BAY_LOCKED_MSG = b => `Bay ${b} is locked. Ask the organiser if you need to change it.`;
 
 const isAdmin = req => ADMIN_TOKEN && req.get('x-admin-token') === ADMIN_TOKEN;
 
@@ -71,6 +76,11 @@ app.post('/api/move', (req, res) => {
   if (bay !== null && !(Number.isInteger(bay) && bay >= 1 && bay <= BAYS))
     return res.status(400).json({ error: 'That bay does not exist.' });
 
+  if (!admin) {
+    const from = state.assignments[playerId];
+    if (bayLocked(from)) return res.status(423).json({ error: BAY_LOCKED_MSG(from) });
+    if (bayLocked(bay)) return res.status(423).json({ error: BAY_LOCKED_MSG(bay) });
+  }
   if (bay === null) {
     delete state.assignments[playerId];
   } else {
@@ -92,8 +102,29 @@ app.post('/api/swap', (req, res) => {
   if (state.locked && !isAdmin(req)) return res.status(423).json({ error: 'The bays are locked. Ask the organiser to change your spot.' });
   const ba = state.assignments[a], bb = state.assignments[b];
   if (ba === bb) return res.json(publicState());
+  if (!isAdmin(req)) {
+    if (bayLocked(ba)) return res.status(423).json({ error: BAY_LOCKED_MSG(ba) });
+    if (bayLocked(bb)) return res.status(423).json({ error: BAY_LOCKED_MSG(bb) });
+  }
   if (bb) state.assignments[a] = bb; else delete state.assignments[a];
   if (ba) state.assignments[b] = ba; else delete state.assignments[b];
+  state.version++; save(); broadcast();
+  res.json(publicState());
+});
+
+// Body: { bay, locked }. Anyone can lock a bay that has players in it; only the organiser can unlock.
+app.post('/api/bay-lock', (req, res) => {
+  const { bay, locked } = req.body || {};
+  const admin = isAdmin(req);
+  if (!(Number.isInteger(bay) && bay >= 1 && bay <= BAYS)) return res.status(400).json({ error: 'That bay does not exist.' });
+  if (locked) {
+    if (state.locked && !admin) return res.status(423).json({ error: 'The bays are locked. Ask the organiser to change your spot.' });
+    if (!Object.values(state.assignments).includes(bay)) return res.status(400).json({ error: `Bay ${bay} is empty.` });
+    state.lockedBays[bay] = true;
+  } else {
+    if (!admin) return res.status(403).json({ error: 'Only the organiser can unlock a bay.' });
+    delete state.lockedBays[bay];
+  }
   state.version++; save(); broadcast();
   res.json(publicState());
 });
@@ -107,17 +138,24 @@ app.post('/api/lock', (req, res) => {
 
 app.post('/api/shuffle', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
-  const ids = players.map(p => p.id);
+  // Players in locked bays stay put; everyone else is shuffled over the remaining space.
+  const ids = players.map(p => p.id).filter(id => !bayLocked(state.assignments[id]));
   for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-  state.assignments = {};
-  ids.slice(0, BAYS * PER_BAY).forEach((id, i) => { state.assignments[id] = (i % BAYS) + 1; });
+  for (const id of ids) delete state.assignments[id];
+  const open = [];
+  for (let b = 1; b <= BAYS; b++) {
+    if (bayLocked(b)) continue;
+    for (let k = 0; k < PER_BAY; k++) open.push({ b, k });
+  }
+  open.sort((x, y) => x.k - y.k || x.b - y.b);
+  ids.forEach((id, i) => { if (open[i]) state.assignments[id] = open[i].b; });
   state.version++; save(); broadcast();
   res.json(publicState());
 });
 
 app.post('/api/reset', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
-  state.assignments = {}; state.version++; save(); broadcast();
+  state.assignments = {}; state.lockedBays = {}; state.version++; save(); broadcast();
   res.json(publicState());
 });
 
