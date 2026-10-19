@@ -69,6 +69,16 @@
   .chip.movable { cursor: grab; touch-action: none; }
   .chip.dragging { opacity: .3; }
   button { font: inherit; color: inherit; }
+  .chip { position: relative; }
+  .del { margin-left: auto; padding: 0 4px; border: 0; background: none; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; }
+  .del:hover { color: var(--orange); }
+  .pool-list .del { margin-left: 6px; }
+  .add { flex-basis: 100%; display: flex; gap: 12px; align-items: baseline; margin-top: 6px; }
+  .add input { flex: 1; max-width: 280px; padding: 6px 2px; border: 0; border-bottom: 2px solid var(--ink); border-radius: 0; background: transparent; font: inherit; font-size: 16px; }
+  .add input:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+  .add button { padding: 0 0 2px; border: 0; border-bottom: 2px solid var(--ink); background: none; font-weight: 500; cursor: pointer; }
+  .removed-wrap { flex-basis: 100%; margin-top: 8px; }
+  .restore { margin-left: 6px; padding: 0; border: 0; border-bottom: 1px solid var(--ink); background: none; font-size: 13px; cursor: pointer; }
   .bay-lock { margin-top: 10px; padding: 0 0 2px; border: 0; border-bottom: 2px solid var(--ink); background: none; font-weight: 500; font-size: 13px; cursor: pointer; }
   .bay-lock:hover { color: var(--orange); border-color: var(--orange); }
   .lock-tag { font-family: var(--marker); color: var(--orange); font-size: 11px; text-transform: uppercase; margin-right: 8px; }
@@ -129,6 +139,14 @@
       <button id="lockBtn">Lock bays</button>
       <button id="shuffleBtn">Shuffle everyone</button>
       <button id="resetBtn">Clear all bays</button>
+      <form class="add" id="addForm" autocomplete="off">
+        <input id="addName" type="text" placeholder="New player name" maxlength="60" aria-label="New player name">
+        <button type="submit">Add player</button>
+      </form>
+      <div class="removed-wrap" id="removedWrap" hidden>
+        <p class="tag">Removed players</p>
+        <ul class="pool-list" id="removed"></ul>
+      </div>
     </section>
     <p id="info" hidden></p>
   </main>
@@ -174,6 +192,34 @@
       render();
       status(locked ? `Bay ${bay} is locked.` : `Bay ${bay} is unlocked.`);
     } catch (e) { status(e.message, true); }
+  }
+
+  async function removePlayer(p) {
+    if (!confirm(`Remove ${p.name} from the tournament? You can put them back under Removed players.`)) return;
+    try { S = await api('/api/remove', { playerId: p.id }); render(); status(`${p.name} removed.`); }
+    catch (e) { status(e.message, true); }
+  }
+  async function restorePlayer(p) {
+    try { S = await api('/api/restore', { playerId: p.id }); render(); status(`${p.name} is back on the list.`); }
+    catch (e) { status(e.message, true); }
+  }
+  async function loadRemoved() {
+    if (!isAdmin) return;
+    try {
+      const r = await fetch('/api/removed', { headers: { 'x-admin-token': adminToken } });
+      const list = await r.json();
+      const ul = $('removed'); ul.textContent = '';
+      $('removedWrap').hidden = !list.length;
+      for (const p of list) {
+        const li = document.createElement('li');
+        li.className = 'chip';
+        li.textContent = p.name + ' ';
+        const b = document.createElement('button');
+        b.className = 'restore'; b.textContent = 'Restore';
+        b.addEventListener('click', () => restorePlayer(p));
+        li.appendChild(b); ul.appendChild(li);
+      }
+    } catch {}
   }
 
   async function move(playerId, bay) {
@@ -272,6 +318,14 @@
     li.className = 'chip';
     li.textContent = p.name;
     li.dataset.swap = p.id;
+    if (isAdmin) {
+      const x = document.createElement('button');
+      x.className = 'del'; x.type = 'button'; x.textContent = '\u00d7';
+      x.setAttribute('aria-label', `Remove ${p.name}`);
+      x.addEventListener('pointerdown', e => e.stopPropagation());
+      x.addEventListener('click', () => removePlayer(p));
+      li.appendChild(x);
+    }
     if (canMove() && (isAdmin || !isBayLocked(S.assignments[p.id]))) {
       li.classList.add('movable');
       li.addEventListener('pointerdown', e => startDrag(e, p, li));
@@ -328,12 +382,20 @@
       : 'Everyone has a random bay. Want to play with friends? Drag your name onto someone in their bay to swap places. Happy with your group? Lock your bay so nobody can swap you out.';
 
     $('admin').hidden = !isAdmin;
+    loadRemoved();
     $('lockBtn').textContent = S.locked ? 'Unlock bays' : 'Lock bays';
   }
 
   $('lockBtn').addEventListener('click', async () => {
     try { S = await api('/api/lock', { locked: !S.locked }); render(); status(S.locked ? 'Bays locked.' : 'Bays unlocked.'); }
     catch (e) { status(e.message, true); }
+  });
+  $('addForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = $('addName').value.trim();
+    if (!name) return;
+    try { S = await api('/api/add', { name }); $('addName').value = ''; render(); status(`${name} added. Drag them into a bay.`); }
+    catch (err) { status(err.message, true); }
   });
   $('shuffleBtn').addEventListener('click', async () => {
     if (!confirm('Shuffle everyone into random bays? The current line-up is replaced.')) return;

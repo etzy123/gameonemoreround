@@ -29,6 +29,11 @@ onthouden en uit de URL gehaald. Daarna kun je:
 - iedereen opnieuw willekeurig indelen (Shuffle everyone). Bays die op slot staan blijven
   zoals ze zijn.
 - losse bays weer openen (Unlock bay)
+- spelers verwijderen met het kruisje naast hun naam. Verwijderde spelers staan onder
+  "Removed players" en kun je met Restore terugzetten (ze komen dan in "Not in a bay")
+- nieuwe spelers toevoegen met "Add player". Ze komen in "Not in a bay"; sleep ze daarna
+  in een bay. Toegevoegde spelers worden in `state.json` op het volume bewaard, dus
+  `players.json` hoef je niet aan te passen.
 - de bays op slot zetten (spelers kunnen dan niets meer wijzigen)
 - alle bays leegmaken (haalt ook alle sloten eraf)
 
@@ -46,8 +51,11 @@ De namen staan in `players.json`. Een nieuwe speler toevoegen: nieuw object met 
 
 ## Startindeling
 
-`seed.json` wordt alleen gebruikt bij de allereerste start, als er nog geen opgeslagen
-indeling op het volume staat. Daarna blijft de live indeling staan, ook bij een redeploy.
+De live indeling staat in `/data/state.json` op het Railway-volume en blijft staan bij elke
+redeploy, zolang het volume op `/data` gemount is en `DATA_DIR=/data` is gezet.
+
+`seed.json` bevat de indeling van 16 oktober (bay 12 op slot) en wordt alleen gebruikt als er
+nog geen `state.json` op het volume staat, bijvoorbeeld als het volume ontbreekt.
 
 ## Updaten vanaf de vorige versie
 

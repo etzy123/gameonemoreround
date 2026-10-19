@@ -13,15 +13,19 @@ const EVENT_INFO = process.env.EVENT_INFO || 'Friday 23 October, Flight Golf Ams
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const players = JSON.parse(fs.readFileSync(path.join(__dirname, 'players.json'), 'utf8'));
-const playerIds = new Set(players.map(p => p.id));
+const basePlayers = JSON.parse(fs.readFileSync(path.join(__dirname, 'players.json'), 'utf8'));
+// Players added by the organiser live in state.added, so they survive redeploys.
+const allPlayers = () => basePlayers.concat(state.added || []);
+const hasPlayer = id => allPlayers().some(p => p.id === id);
 
-let state = { assignments: {}, locked: false, lockedBays: {}, version: 0 };
+let state = { assignments: {}, locked: false, lockedBays: {}, removed: {}, added: [], version: 0 };
 try {
   const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
   state = { ...state, ...saved };
-  for (const id of Object.keys(state.assignments)) if (!playerIds.has(id)) delete state.assignments[id];
+  if (!Array.isArray(state.added)) state.added = [];
+  for (const id of Object.keys(state.assignments)) if (!hasPlayer(id)) delete state.assignments[id];
   if (!state.lockedBays || typeof state.lockedBays !== 'object') state.lockedBays = {};
+  if (!state.removed || typeof state.removed !== 'object') state.removed = {};
 } catch {
   // First boot: start from the random pre-assignment in seed.json, if present.
   try { state = { ...state, ...JSON.parse(fs.readFileSync(path.join(__dirname, 'seed.json'), 'utf8')) }; save(); } catch {}
@@ -33,9 +37,12 @@ function save() {
   fs.renameSync(tmp, STATE_FILE);
 }
 
+const activePlayers = () => allPlayers().filter(p => !state.removed[p.id]);
+const isActive = id => hasPlayer(id) && !state.removed[id];
+
 function publicState() {
   return { event: EVENT_NAME, info: EVENT_INFO, bays: BAYS, perBay: PER_BAY,
-           players, assignments: state.assignments, locked: state.locked,
+           players: activePlayers(), assignments: state.assignments, locked: state.locked,
            lockedBays: Object.keys(state.lockedBays).map(Number), version: state.version };
 }
 
@@ -71,7 +78,7 @@ app.get('/api/stream', (req, res) => {
 app.post('/api/move', (req, res) => {
   const { playerId, bay } = req.body || {};
   const admin = isAdmin(req);
-  if (!playerIds.has(playerId)) return res.status(400).json({ error: 'Unknown player.' });
+  if (!isActive(playerId)) return res.status(400).json({ error: 'Unknown player.' });
   if (state.locked && !admin) return res.status(423).json({ error: 'The bays are locked. Ask the organiser to change your spot.' });
   if (bay !== null && !(Number.isInteger(bay) && bay >= 1 && bay <= BAYS))
     return res.status(400).json({ error: 'That bay does not exist.' });
@@ -98,7 +105,7 @@ app.post('/api/move', (req, res) => {
 // Body: { a, b } -> the two players trade places (a bay or the waiting list).
 app.post('/api/swap', (req, res) => {
   const { a, b } = req.body || {};
-  if (!playerIds.has(a) || !playerIds.has(b) || a === b) return res.status(400).json({ error: 'Unknown player.' });
+  if (!isActive(a) || !isActive(b) || a === b) return res.status(400).json({ error: 'Unknown player.' });
   if (state.locked && !isAdmin(req)) return res.status(423).json({ error: 'The bays are locked. Ask the organiser to change your spot.' });
   const ba = state.assignments[a], bb = state.assignments[b];
   if (ba === bb) return res.json(publicState());
@@ -129,6 +136,47 @@ app.post('/api/bay-lock', (req, res) => {
   res.json(publicState());
 });
 
+// Organiser only: take a player off the roster, or put them back on the waiting list.
+app.post('/api/remove', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
+  const { playerId } = req.body || {};
+  if (!isActive(playerId)) return res.status(400).json({ error: 'Unknown player.' });
+  const bay = state.assignments[playerId];
+  delete state.assignments[playerId];
+  state.removed[playerId] = true;
+  if (bay && !Object.values(state.assignments).includes(bay)) delete state.lockedBays[bay];
+  state.version++; save(); broadcast();
+  res.json(publicState());
+});
+
+app.post('/api/restore', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
+  const { playerId } = req.body || {};
+  if (!hasPlayer(playerId) || !state.removed[playerId]) return res.status(400).json({ error: 'Unknown player.' });
+  delete state.removed[playerId];
+  state.version++; save(); broadcast();
+  res.json(publicState());
+});
+
+// Organiser only. Body: { name }. New players land on the waiting list ("Not in a bay").
+app.post('/api/add', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
+  const name = String((req.body && req.body.name) || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!name) return res.status(400).json({ error: 'Enter a name.' });
+  if (activePlayers().some(p => p.name.toLowerCase() === name.toLowerCase()))
+    return res.status(409).json({ error: `${name} is already on the list.` });
+  let n = state.added.length + 1, id;
+  do { id = 'a' + String(n++).padStart(2, '0'); } while (hasPlayer(id));
+  state.added.push({ id, name });
+  state.version++; save(); broadcast();
+  res.json(publicState());
+});
+
+app.get('/api/removed', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
+  res.json(allPlayers().filter(p => state.removed[p.id]));
+});
+
 app.post('/api/lock', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
   state.locked = !!(req.body && req.body.locked);
@@ -139,7 +187,7 @@ app.post('/api/lock', (req, res) => {
 app.post('/api/shuffle', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Admin only.' });
   // Players in locked bays stay put; everyone else is shuffled over the remaining space.
-  const ids = players.map(p => p.id).filter(id => !bayLocked(state.assignments[id]));
+  const ids = activePlayers().map(p => p.id).filter(id => !bayLocked(state.assignments[id]));
   for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
   for (const id of ids) delete state.assignments[id];
   const open = [];
